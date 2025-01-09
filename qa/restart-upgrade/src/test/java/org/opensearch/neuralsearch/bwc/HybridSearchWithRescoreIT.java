@@ -93,7 +93,12 @@ public class HybridSearchWithRescoreIT extends AbstractRestartUpgradeRestTestCas
         final Map<String, ?> methodParameters,
         final RescoreContext rescoreContextForNeuralQuery
     ) {
-        NeuralQueryBuilder neuralQueryBuilder = NeuralQueryBuilder.fieldName(VECTOR_EMBEDDING_FIELD).modelId(modelId).queryText(QUERY).k(5);
+        NeuralQueryBuilder neuralQueryBuilder = NeuralQueryBuilder.builder()
+            .fieldName(VECTOR_EMBEDDING_FIELD)
+            .modelId(modelId)
+            .queryText(QUERY)
+            .k(5)
+            .build();
         if (methodParameters != null) {
             neuralQueryBuilder.methodParameters(methodParameters);
         }
