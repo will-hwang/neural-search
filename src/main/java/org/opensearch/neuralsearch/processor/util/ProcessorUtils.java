@@ -140,21 +140,25 @@ public class ProcessorUtils {
         }
     }
 
-    /**
-     * Returns the mapping associated with a path to a value, otherwise
-     * returns an empty optional when it encounters a dead end.
-     * <hr>
-     * When the targetField has the form (key[.key]) it will iterate through
-     * the map to see if a mapping exists.
-     *
-     * @param sourceAsMap The Source map (a map of maps) to iterate through
-     * @param targetField The path to take to get the desired mapping
-     * @return A possible result within an optional
-     */
     public static Optional<Object> getValueFromSource(final Map<String, Object> sourceAsMap, final String targetField) {
         return getValueFromSource(sourceAsMap, targetField, -1);
     }
 
+    /**
+     * Returns the mapping associated with a path to a value, otherwise
+     * returns an empty optional when it encounters a dead end.
+     * When the targetField has the form (key[.key]) it will iterate through
+     * the map to see if a mapping exists.
+     * When a List is encountered during traversal, the index parameter is used to select
+     * the appropriate element from the list. If the selected element is a map, traversal continues with
+     * that map using the next key in the path.
+     *
+     * @param sourceAsMap The Source map (a map of maps) to iterate through
+     * @param targetField The path to take to get the desired mapping
+     * @param index       the index to use when a list is encountered during traversal; if list processing is not needed,
+     *                    -1 is passed in
+     * @return A possible result within an optional
+     */
     public static Optional<Object> getValueFromSource(final Map<String, Object> sourceAsMap, final String targetField, int index) {
         String[] keys = targetField.split("\\.");
         Optional<Object> currentValue = Optional.ofNullable(sourceAsMap);
@@ -164,13 +168,13 @@ public class ProcessorUtils {
                 if (value instanceof List && index != -1) {
                     Object listValue = ((List) value).get(index);
                     if (listValue instanceof Map) {
-                        Map<String, Object> currentMap = (Map<String, Object>) listValue;
+                        Map currentMap = (Map) listValue;
                         return Optional.ofNullable(currentMap.get(key));
                     }
                 } else if (!(value instanceof Map<?, ?>)) {
                     return Optional.empty();
                 }
-                Map<String, Object> currentMap = (Map<String, Object>) value;
+                Map currentMap = (Map) value;
                 return Optional.ofNullable(currentMap.get(key));
             });
 
@@ -182,30 +186,38 @@ public class ProcessorUtils {
         return currentValue;
     }
 
-    /**
-     * Given the path to targetKey in sourceAsMap, sets targetValue in targetKey
-     *
-     * @param sourceAsMap The Source map (a map of maps) to iterate through
-     * @param targetKey The path to key to insert the desired targetValue
-     * @param targetValue The value to insert to targetKey
-     */
     public static void setValueToSource(Map<String, Object> sourceAsMap, String targetKey, Object targetValue) {
         setValueToSource(sourceAsMap, targetKey, targetValue, -1);
     }
+
+    /**
+     * Inserts or updates a value in a nested map structure, with optional support for list traversal.
+     * This method navigates through the provided sourceAsMap using the dot-delimited key path
+     * specified by targetKey. Intermediate maps are created as needed. When a List is encountered,
+     * the provided index is used to select the element from the list. The selected element must be a map to
+     * continue the traversal.
+     * Once the final map in the path is reached, the method sets the value for the last key.
+     *
+     * @param sourceAsMap The Source map (a map of maps) to iterate through
+     * @param targetKey   he path to key to insert the desired targetValue
+     * @param targetValue the value to set at the specified key path
+     * @param index       the index to use when a list is encountered during traversal; if list processing is not needed,
+     *                    -1 is passed in
+     */
 
     public static void setValueToSource(Map<String, Object> sourceAsMap, String targetKey, Object targetValue, int index) {
         if (sourceAsMap == null || targetKey == null) return;
 
         String[] keys = targetKey.split("\\.");
-        Map<String, Object> current = sourceAsMap;
+        Map current = sourceAsMap;
 
         for (int i = 0; i < keys.length - 1; i++) {
             Object next = current.computeIfAbsent(keys[i], k -> new HashMap<>());
             if (next instanceof List<?> list) {
                 if (index < 0 || index >= list.size()) return;
-                current = (Map<String, Object>) list.get(index);
+                current = (Map) list.get(index);
             } else if (next instanceof Map<?, ?>) {
-                current = (Map<String, Object>) next;
+                current = (Map) next;
             } else {
                 throw new IllegalStateException("Unexpected data structure at " + keys[i]);
             }
@@ -214,11 +226,11 @@ public class ProcessorUtils {
         String lastKey = keys[keys.length - 1];
         Object existingValue = current.get(lastKey);
 
-        if (existingValue instanceof List<?> existingList) {
-            if (index >= 0 && index < existingList.size()) {
-                ((List<Object>) existingList).set(index, targetValue);
+        if (existingValue instanceof List) {
+            if (index >= 0 && index < ((List) existingValue).size()) {
+                ((List) existingValue).set(index, targetValue);
             } else if (index == -1) {
-                ((List<Object>) existingList).add(targetValue);
+                ((List) existingValue).add(targetValue);
             }
         } else {
             current.put(lastKey, targetValue);
@@ -269,7 +281,7 @@ public class ProcessorUtils {
      * e.g:
      * path: level1.level2.oldKey
      * textKey: newKey
-     * level: 2
+     * level: 3
      * returns level1.level2.newKey
      *
      * @param path path to old key
@@ -306,17 +318,20 @@ public class ProcessorUtils {
      */
     public static String findKeyFromFromValue(Map<String, Object> sourceAsMap, String path, int level) {
         String[] keys = path.split("\\.", level);
-        Map<String, Object> currentMap = sourceAsMap;
+
         String targetValue = keys[keys.length - 1];
-        for (String key : keys) {
-            if (key.equals(targetValue)) {
-                break;
-            }
-            if (currentMap.containsKey(key)) {
-                Object value = currentMap.get(key);
+        Map<String, Object> currentMap = sourceAsMap;
+
+        for (int i = 0; i < keys.length - 1; i++) {
+            if (currentMap.containsKey(keys[i])) {
+                Object value = currentMap.get(keys[i]);
                 if (value instanceof Map) {
-                    currentMap = (Map<String, Object>) value;
+                    currentMap = (Map) value;
+                } else {
+                    return null;
                 }
+            } else {
+                return null;
             }
         }
         String lastFoundKey = null;

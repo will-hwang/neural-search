@@ -26,8 +26,8 @@ public final class TextEmbeddingProcessor extends InferenceProcessor {
 
     public static final String TYPE = "text_embedding";
     public static final String LIST_TYPE_NESTED_MAP_KEY = "knn";
-    public static final String IGNORE_EXISTING = "ignore_existing";
-    public static final boolean DEFAULT_IGNORE_EXISTING = Boolean.FALSE;
+    public static final String SKIP_EXISTING = "skip_existing";
+    public static final boolean DEFAULT_SKIP_EXISTING = Boolean.FALSE;
 
     public TextEmbeddingProcessor(
         String tag,
@@ -52,7 +52,7 @@ public final class TextEmbeddingProcessor extends InferenceProcessor {
         mlCommonsClientAccessor.inferenceSentences(
             TextInferenceRequest.builder().modelId(this.modelId).inputTexts(inferenceList).build(),
             ActionListener.wrap(vectors -> {
-                setVectorFieldsToDocument(ingestDocument, ProcessMap, vectors);
+                setVectorFieldsToDocument(ingestDocument, ProcessMap, vectors, false);
                 handler.accept(ingestDocument, null);
             }, e -> { handler.accept(null, e); })
         );

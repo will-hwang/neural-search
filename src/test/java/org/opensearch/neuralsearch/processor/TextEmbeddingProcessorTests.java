@@ -745,7 +745,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         Map<String, Object> knnMap = processor.buildMapWithTargetKeys(ingestDocument);
 
         List<List<Float>> modelTensorList = createMockVectorResult();
-        processor.setVectorFieldsToDocument(ingestDocument, knnMap, modelTensorList);
+        processor.setVectorFieldsToDocument(ingestDocument, knnMap, modelTensorList, false);
         assertEquals(12, ingestDocument.getSourceAndMetadata().size());
     }
 
@@ -1046,10 +1046,10 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor processor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = processor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createMockVectorResult();
-        processor.setVectorFieldsToDocument(ingestDocument, knnMap, modelTensorList);
+        processor.setVectorFieldsToDocument(ingestDocument, knnMap, modelTensorList, false);
 
         List<List<Float>> modelTensorList1 = createMockVectorResult();
-        processor.setVectorFieldsToDocument(ingestDocument, knnMap, modelTensorList1);
+        processor.setVectorFieldsToDocument(ingestDocument, knnMap, modelTensorList1, false);
         assertEquals(12, ingestDocument.getSourceAndMetadata().size());
         assertEquals(2, ((List<?>) ingestDocument.getSourceAndMetadata().get("oriKey6_knn")).size());
     }

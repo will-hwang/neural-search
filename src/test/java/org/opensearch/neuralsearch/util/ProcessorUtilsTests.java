@@ -270,4 +270,14 @@ public class ProcessorUtilsTests extends OpenSearchTestCase {
         String newKey = computeFullTextKey(targetPath, textKey, 2);
         assertEquals("ml.model", newKey);
     }
+
+    public void testComputeFullTextKey_returnsExpectedValuesWithDuplicate_WithExistingKeys() {
+        String setTargetPath = "ml.info.text";
+        String targetValue = "ml";
+        setUpValidSourceMap();
+        setValueToSource(sourceMap, setTargetPath, targetValue);
+        String findPath = "ml.info.ml";
+        String key = findKeyFromFromValue(sourceMap, findPath, 3);
+        assertEquals("text", key);
+    }
 }

@@ -12,23 +12,25 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.env.Environment;
 import org.opensearch.ingest.IngestDocument;
 import org.opensearch.neuralsearch.ml.MLCommonsClientAccessor;
+import org.opensearch.neuralsearch.processor.TextInferenceRequest;
 import org.opensearch.neuralsearch.processor.util.ProcessorUtils;
-import org.opensearch.neuralsearch.util.ProcessorDocumentUtils;
 import org.opensearch.transport.client.OpenSearchClient;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
- * This processor is used for optimizing text embedding processing. This processor will skip redundant inference calls by comparing existing document and new document.
- * If inference texts stay the same, the OptimizedTextEmbeddingProcessor will copy over existing embeddings and filter out the inference text from process map and inference list
+ * This processor is used for selective text embedding processing. This processor will skip redundant inference calls by comparing existing document and new document.
+ * If inference texts stay the same, the SelectiveTextEmbeddingProcessor will copy over existing embeddings and mark null inference text from process map
  */
 @Log4j2
-public class OptimizedTextEmbeddingProcessor extends OptimizedInferenceProcessor {
+public class SelectiveTextEmbeddingProcessor extends SelectiveInferenceProcessor {
     public static final String TYPE = "text_embedding";
     public static final String LIST_TYPE_NESTED_MAP_KEY = "knn";
     private static final String INDEX_FIELD = "_index";
@@ -36,7 +38,7 @@ public class OptimizedTextEmbeddingProcessor extends OptimizedInferenceProcessor
 
     private final OpenSearchClient openSearchClient;
 
-    public OptimizedTextEmbeddingProcessor(
+    public SelectiveTextEmbeddingProcessor(
         String tag,
         String description,
         int batchSize,
@@ -63,10 +65,12 @@ public class OptimizedTextEmbeddingProcessor extends OptimizedInferenceProcessor
         openSearchClient.execute(GetAction.INSTANCE, new GetRequest(index, id), ActionListener.wrap(response -> {
             final Map<String, Object> document = response.getSourceAsMap();
             if (document == null || document.isEmpty()) {
-                makeInferenceCall(ingestDocument, ProcessMap, inferenceList, handler);
+                makeInferenceCall(ingestDocument, ProcessMap, inferenceList, handler, false);
             } else {
                 Map<String, Object> filteredProcessMap = filterProcessMap(document, ingestDocument.getSourceAndMetadata(), ProcessMap);
-                List<String> filteredInferenceList = createInferenceList(filteredProcessMap);
+                List<String> filteredInferenceList = createInferenceList(filteredProcessMap).stream()
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
                 if (!filteredInferenceList.isEmpty()) {
                     makeInferenceCall(ingestDocument, filteredProcessMap, filteredInferenceList, handler, true);
                 } else {
@@ -77,8 +81,11 @@ public class OptimizedTextEmbeddingProcessor extends OptimizedInferenceProcessor
     }
 
     @Override
-    public void doBatchExecute(List<String> inferenceList, Consumer<List<?>> handler, Consumer<Exception> onException) {
-        // TODO: invoke Opensearch Client's Multi-Get request to enable batch execution
+    protected void doBatchExecute(List<String> inferenceList, Consumer<List<?>> handler, Consumer<Exception> onException) {
+        mlCommonsClientAccessor.inferenceSentences(
+            TextInferenceRequest.builder().modelId(this.modelId).inputTexts(inferenceList).build(),
+            ActionListener.wrap(handler::accept, onException)
+        );
     }
 
     /**
@@ -102,7 +109,7 @@ public class OptimizedTextEmbeddingProcessor extends OptimizedInferenceProcessor
         Map<String, Object> existingSourceAndMetadataMap,
         int index
     ) {
-        String textKey = ProcessorUtils.findKeyFromFromValue(ProcessorDocumentUtils.unflattenJson(fieldMap), currentPath, level);
+        String textKey = ProcessorUtils.findKeyFromFromValue(fieldMap, currentPath, level);
         if (textKey == null) {
             return processValue;
         }
@@ -126,9 +133,9 @@ public class OptimizedTextEmbeddingProcessor extends OptimizedInferenceProcessor
      *  - In the given list of inference texts, inference texts in the same index is the same between existingSourceAndMetadataMap and sourceAndMetadataMap
      *  - existing existingSourceAndMetadataMap has embeddings for corresponding inference texts
      * @param processList list of inference texts to check for
-     * @param sourceList list of inference texts in sourceAndMetadataMap
-     * @param existingList list of inference texts in existingSourceAndMetadataMap
-     * @param embeddingList list of embeddings for inference texts
+     * @param sourceListOptional Optional list of inference texts in sourceAndMetadataMap
+     * @param existingListOptional Optional list of inference texts in existingSourceAndMetadataMap
+     * @param embeddingListOptional Optional list of embeddings for inference texts
      * @param sourceAndMetadataMap SourceAndMetadataMap of ingestDocument Document
      * @param existingSourceAndMetadataMap SourceAndMetadataMap of existing Document
      * @param fullEmbeddingKey path to embedding key
@@ -138,28 +145,36 @@ public class OptimizedTextEmbeddingProcessor extends OptimizedInferenceProcessor
     @Override
     public List<Object> processValues(
         List<?> processList,
-        Optional<Object> sourceList,
-        Optional<Object> existingList,
-        Optional<Object> embeddingList,
+        Optional<Object> sourceListOptional,
+        Optional<Object> existingListOptional,
+        Optional<Object> embeddingListOptional,
         Map<String, Object> sourceAndMetadataMap,
         Map<String, Object> existingSourceAndMetadataMap,
         String fullEmbeddingKey
     ) {
         List<Object> filteredList = new ArrayList<>();
         List<Object> updatedEmbeddings = new ArrayList<>();
-        if (sourceList.isPresent() && existingList.isPresent()) {
-            int min = Math.min(((List) sourceList.get()).size(), ((List) existingList.get()).size());
-            for (int j = 0; j < min; j++) {
-                if (((List) sourceList.get()).get(j).equals(((List) existingList.get()).get(j))) {
-                    updatedEmbeddings.add(((List) embeddingList.get()).get(j));
-                } else {
-                    filteredList.add(processList.get(j));
-                    updatedEmbeddings.add(null);
+        if (sourceListOptional.isPresent() && existingListOptional.isPresent()) {
+            if (sourceListOptional.get() instanceof List
+                && existingListOptional.get() instanceof List
+                && embeddingListOptional.get() instanceof List) {
+                List sourceList = (ArrayList) sourceListOptional.get();
+                List existingList = (ArrayList) existingListOptional.get();
+                List embeddingList = (ArrayList) embeddingListOptional.get();
+                int min = Math.min(sourceList.size(), existingList.size());
+                for (int j = 0; j < min; j++) {
+                    if (sourceList.get(j).equals(existingList.get(j))) {
+                        updatedEmbeddings.add((embeddingList).get(j));
+                        filteredList.add(null);
+                    } else {
+                        filteredList.add(processList.get(j));
+                        updatedEmbeddings.add(null);
+                    }
                 }
+                ProcessorUtils.setValueToSource(sourceAndMetadataMap, fullEmbeddingKey, updatedEmbeddings);
             }
-            ProcessorUtils.setValueToSource(sourceAndMetadataMap, fullEmbeddingKey, updatedEmbeddings);
         } else {
-            return new ArrayList<>(processList);
+            return (List) processList;
         }
         return filteredList;
     }

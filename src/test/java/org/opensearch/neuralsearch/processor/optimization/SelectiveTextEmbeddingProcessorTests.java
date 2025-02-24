@@ -57,7 +57,7 @@ import com.google.common.collect.ImmutableMap;
 import lombok.SneakyThrows;
 import org.opensearch.transport.client.OpenSearchClient;
 
-public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTestCase {
+public class SelectiveTextEmbeddingProcessorTests extends InferenceProcessorTestCase {
 
     protected static final String PARENT_FIELD = "parent";
     protected static final String CHILD_FIELD_LEVEL_1 = "child_level1";
@@ -100,99 +100,99 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
     }
 
     @SneakyThrows
-    private OptimizedTextEmbeddingProcessor createInstanceWithLevel2MapConfig() {
+    private SelectiveTextEmbeddingProcessor createInstanceWithLevel2MapConfig() {
         Map<String, Processor.Factory> registry = new HashMap<>();
         Map<String, Object> config = new HashMap<>();
-        config.put(OptimizedTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
+        config.put(SelectiveTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
         config.put(
-            OptimizedTextEmbeddingProcessor.FIELD_MAP_FIELD,
+            SelectiveTextEmbeddingProcessor.FIELD_MAP_FIELD,
             ImmutableMap.of("key1", ImmutableMap.of("test1", "test1_knn"), "key2", ImmutableMap.of("test3", CHILD_LEVEL_2_KNN_FIELD))
         );
-        config.put(TextEmbeddingProcessor.IGNORE_EXISTING, true);
-        return (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
+        config.put(TextEmbeddingProcessor.SKIP_EXISTING, true);
+        return (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
     }
 
     @SneakyThrows
-    private OptimizedTextEmbeddingProcessor createInstanceWithLevel1MapConfig() {
+    private SelectiveTextEmbeddingProcessor createInstanceWithLevel1MapConfig() {
         Map<String, Processor.Factory> registry = new HashMap<>();
         Map<String, Object> config = new HashMap<>();
-        config.put(OptimizedTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
-        config.put(OptimizedTextEmbeddingProcessor.FIELD_MAP_FIELD, ImmutableMap.of("key1", "key1_knn", "key2", "key2_knn"));
-        config.put(TextEmbeddingProcessor.IGNORE_EXISTING, true);
-        return (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
+        config.put(SelectiveTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
+        config.put(SelectiveTextEmbeddingProcessor.FIELD_MAP_FIELD, ImmutableMap.of("key1", "key1_knn", "key2", "key2_knn"));
+        config.put(TextEmbeddingProcessor.SKIP_EXISTING, true);
+        return (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
     }
 
     @SneakyThrows
-    private OptimizedTextEmbeddingProcessor createInstanceWithNestedLevelConfig() {
+    private SelectiveTextEmbeddingProcessor createInstanceWithNestedLevelConfig() {
         Map<String, Processor.Factory> registry = new HashMap<>();
         Map<String, Object> config = new HashMap<>();
-        config.put(OptimizedTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
-        config.put(TextEmbeddingProcessor.IGNORE_EXISTING, true);
+        config.put(SelectiveTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
+        config.put(TextEmbeddingProcessor.SKIP_EXISTING, true);
         config.put(
-            OptimizedTextEmbeddingProcessor.FIELD_MAP_FIELD,
+            SelectiveTextEmbeddingProcessor.FIELD_MAP_FIELD,
             ImmutableMap.of(
                 String.join(".", Arrays.asList(PARENT_FIELD, CHILD_FIELD_LEVEL_1, CHILD_FIELD_LEVEL_2)),
                 CHILD_LEVEL_2_KNN_FIELD
             )
         );
-        return (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
+        return (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
     }
 
     @SneakyThrows
-    private OptimizedTextEmbeddingProcessor createInstanceWithNestedMappingsConfig() {
+    private SelectiveTextEmbeddingProcessor createInstanceWithNestedMappingsConfig() {
         Map<String, Processor.Factory> registry = new HashMap<>();
         Map<String, Object> config = new HashMap<>();
-        config.put(OptimizedTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
-        config.put(TextEmbeddingProcessor.IGNORE_EXISTING, true);
+        config.put(SelectiveTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
+        config.put(TextEmbeddingProcessor.SKIP_EXISTING, true);
         config.put(
-            OptimizedTextEmbeddingProcessor.FIELD_MAP_FIELD,
+            SelectiveTextEmbeddingProcessor.FIELD_MAP_FIELD,
             ImmutableMap.of(
                 String.join(".", Arrays.asList(PARENT_FIELD, CHILD_FIELD_LEVEL_1, CHILD_FIELD_LEVEL_2)),
                 CHILD_LEVEL_2_KNN_FIELD
             )
         );
-        return (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
+        return (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
     }
 
     @SneakyThrows
-    private OptimizedTextEmbeddingProcessor createInstanceWithNestedMapConfig() {
+    private SelectiveTextEmbeddingProcessor createInstanceWithNestedMapConfig() {
         Map<String, Processor.Factory> registry = new HashMap<>();
         Map<String, Object> config = new HashMap<>();
-        config.put(OptimizedTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
-        config.put(TextEmbeddingProcessor.IGNORE_EXISTING, true);
+        config.put(SelectiveTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
+        config.put(TextEmbeddingProcessor.SKIP_EXISTING, true);
         config.put(
-            OptimizedTextEmbeddingProcessor.FIELD_MAP_FIELD,
+            SelectiveTextEmbeddingProcessor.FIELD_MAP_FIELD,
             ImmutableMap.of(
                 String.join(".", Arrays.asList(PARENT_FIELD, CHILD_FIELD_LEVEL_1)),
                 Map.of(CHILD_FIELD_LEVEL_2, CHILD_LEVEL_2_KNN_FIELD)
             )
         );
-        return (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
+        return (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
     }
 
     @SneakyThrows
-    private OptimizedTextEmbeddingProcessor createInstanceWithNestedSourceAndDestinationConfig() {
+    private SelectiveTextEmbeddingProcessor createInstanceWithNestedSourceAndDestinationConfig() {
         Map<String, Processor.Factory> registry = new HashMap<>();
         Map<String, Object> config = new HashMap<>();
-        config.put(OptimizedTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
-        config.put(TextEmbeddingProcessor.IGNORE_EXISTING, true);
+        config.put(SelectiveTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
+        config.put(TextEmbeddingProcessor.SKIP_EXISTING, true);
         config.put(
-            OptimizedTextEmbeddingProcessor.FIELD_MAP_FIELD,
+            SelectiveTextEmbeddingProcessor.FIELD_MAP_FIELD,
             ImmutableMap.of(
                 String.join(".", Arrays.asList(PARENT_FIELD, CHILD_FIELD_LEVEL_1, CHILD_1_TEXT_FIELD)),
                 CHILD_FIELD_LEVEL_2 + "." + CHILD_LEVEL_2_KNN_FIELD
             )
         );
-        return (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
+        return (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
     }
 
     @SneakyThrows
-    private OptimizedTextEmbeddingProcessor createInstanceWithNestedSourceAndDestinationMapConfig() {
+    private SelectiveTextEmbeddingProcessor createInstanceWithNestedSourceAndDestinationMapConfig() {
         Map<String, Processor.Factory> registry = new HashMap<>();
         Map<String, Object> config = buildObjMap(
-            Pair.of(OptimizedTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId"),
+            Pair.of(SelectiveTextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId"),
             Pair.of(
-                OptimizedTextEmbeddingProcessor.FIELD_MAP_FIELD,
+                SelectiveTextEmbeddingProcessor.FIELD_MAP_FIELD,
                 buildObjMap(
                     Pair.of(
                         PARENT_FIELD,
@@ -203,9 +203,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
                     )
                 )
             ),
-            Pair.of(TextEmbeddingProcessor.IGNORE_EXISTING, true)
+            Pair.of(TextEmbeddingProcessor.SKIP_EXISTING, true)
         );
-        return (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
+        return (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(registry, PROCESSOR_TAG, DESCRIPTION, config);
     }
 
     public void testExecute_when_initial_ingest_successful() throws IOException {
@@ -217,7 +217,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         List<String> inferenceList = Arrays.asList("value1", "value2");
         TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
         IngestDocument ingestDocument = new IngestDocument(sourceAndMetadata, new HashMap<>());
-        OptimizedInferenceProcessor processor = createInstanceWithLevel1MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel1MapConfig();
 
         GetResponse response = mockEmptyGetResponse();
         doAnswer(invocation -> {
@@ -256,9 +256,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         );
         Map<String, Object> config = new HashMap<>();
         config.put(TextEmbeddingProcessor.MODEL_ID_FIELD, "mockModelId");
-        config.put(TextEmbeddingProcessor.IGNORE_EXISTING, true);
+        config.put(TextEmbeddingProcessor.SKIP_EXISTING, true);
         config.put(TextEmbeddingProcessor.FIELD_MAP_FIELD, ImmutableMap.of("key1", "key1Mapped", "key2", "key2Mapped"));
-        OptimizedTextEmbeddingProcessor processor = (OptimizedTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(
+        SelectiveTextEmbeddingProcessor processor = (SelectiveTextEmbeddingProcessor) textEmbeddingProcessorFactory.create(
             registry,
             PROCESSOR_TAG,
             DESCRIPTION,
@@ -279,13 +279,13 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         ingestSourceAndMetadata.put("key2", "value2");
         IngestDocument ingestDocument = new IngestDocument(ingestSourceAndMetadata, new HashMap<>());
         List<String> inferenceList = Arrays.asList("value1", "value2");
-        TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
+        TextInferenceRequest ingestRequest = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
         Map<String, Object> updateSourceAndMetadata = deepCopy(ingestSourceAndMetadata); // no change
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedInferenceProcessor processor = createInstanceWithLevel1MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel1MapConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(2, 2, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, null);
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler); // insert document
         processor.execute(updateDocument, handler); // update document
@@ -293,7 +293,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         verify(handler, times(2)).accept(any(IngestDocument.class), isNull());
         verify(openSearchClient, times(2)).execute(isA(GetAction.class), isA(GetRequest.class), isA(ActionListener.class));
         verify(mlCommonsClientAccessor, times(1)).inferenceSentences(inferenceRequestCaptor.capture(), isA(ActionListener.class));
-        assertEquals(request.getInputTexts(), inferenceRequestCaptor.getValue().getInputTexts());
+        assertEquals(ingestRequest.getInputTexts(), inferenceRequestCaptor.getValue().getInputTexts());
         List key1insertVectors = (List) ingestDocument.getSourceAndMetadata().get("key1_knn");
         List key1updateVectors = (List) updateDocument.getSourceAndMetadata().get("key1_knn");
         List key2insertVectors = (List) ingestDocument.getSourceAndMetadata().get("key2_knn");
@@ -321,9 +321,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .build();
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedInferenceProcessor processor = createInstanceWithLevel1MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel1MapConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(2, 2, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler); // insert
@@ -353,15 +353,15 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         ingestSourceAndMetadata.put("key1", list1);
         ingestSourceAndMetadata.put("key2", list2);
         List<String> inferenceList = Arrays.asList("test1", "test2", "test3", "test4", "test5", "test6");
-        TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
+        TextInferenceRequest ingestRequest = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
         IngestDocument ingestDocument = new IngestDocument(ingestSourceAndMetadata, new HashMap<>());
 
         Map<String, Object> updateSourceAndMetadata = deepCopy(ingestSourceAndMetadata);
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedInferenceProcessor processor = createInstanceWithLevel1MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel1MapConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(6, 2, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, null);
 
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler);
@@ -370,7 +370,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         verify(handler, times(2)).accept(any(IngestDocument.class), isNull());
         verify(openSearchClient, times(2)).execute(isA(GetAction.class), isA(GetRequest.class), isA(ActionListener.class));
         verify(mlCommonsClientAccessor, times(1)).inferenceSentences(inferenceRequestCaptor.capture(), isA(ActionListener.class));
-        assertEquals(request.getInputTexts(), inferenceRequestCaptor.getValue().getInputTexts());
+        assertEquals(ingestRequest.getInputTexts(), inferenceRequestCaptor.getValue().getInputTexts());
         List key1insertVectors = (List) ingestDocument.getSourceAndMetadata().get("key1_knn");
         List key1updateVectors = (List) updateDocument.getSourceAndMetadata().get("key1_knn");
         List key2insertVectors = (List) ingestDocument.getSourceAndMetadata().get("key2_knn");
@@ -401,9 +401,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .inputTexts(filteredInferenceList)
             .build();
 
-        OptimizedInferenceProcessor processor = createInstanceWithLevel1MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel1MapConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(6, 2, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler);
@@ -442,9 +442,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         Map<String, Object> updateSourceAndMetadata = deepCopy(ingestSourceAndMetadata);
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedInferenceProcessor processor = createInstanceWithLevel2MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel2MapConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(6, 2, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, null);
 
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler);
@@ -489,9 +489,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .inputTexts(filteredInferenceList)
             .build();
 
-        OptimizedInferenceProcessor processor = createInstanceWithLevel2MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel2MapConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(6, 2, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler);
@@ -527,12 +527,12 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         List<String> inferenceList = Arrays.asList("test2", "test4");
         TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
         IngestDocument ingestDocument = new IngestDocument(ingestSourceAndMetadata, new HashMap<>());
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithLevel2MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel2MapConfig();
         Map<String, Object> updateSourceAndMetadata = deepCopy(ingestSourceAndMetadata);
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(2, 6, 0.0f, 0.1f);
+        mockVectorCreation(request, null);
 
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler);
@@ -563,7 +563,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         List<String> inferenceList = Arrays.asList("test2", "test4");
         IngestDocument ingestDocument = new IngestDocument(ingestSourceAndMetadata, new HashMap<>());
         TextInferenceRequest ingestRequest = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithLevel2MapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithLevel2MapConfig();
         Map<String, Object> updateSourceAndMetadata = deepCopy(ingestSourceAndMetadata);
         ((Map) updateSourceAndMetadata.get("key1")).put("test1", "newValue1");
         List<String> filteredInferenceList = Arrays.asList("newValue1");
@@ -574,7 +574,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .build();
 
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(2, 6, 0.0f, 0.1f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         BiConsumer handler = mock(BiConsumer.class);
         processor.execute(ingestDocument, handler);
@@ -606,10 +606,10 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
         Map<String, Object> updateSourceAndMetadata = deepCopy(ingestSourceAndMetadata);
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
-        OptimizedInferenceProcessor processor = createInstanceWithNestedLevelConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedLevelConfig();
 
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(1, 4, 0.0f, 1.0f);
+        mockVectorCreation(request, null);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -648,10 +648,10 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .inputTexts(filteredInferenceList)
             .build();
 
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedMappingsConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedMappingsConfig();
 
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(1, 4, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -697,10 +697,10 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         Map<String, Object> updateSourceAndMetadata = deepCopy(ingestSourceAndMetadata);
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
 
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(1, 100, 0.0f, 1.0f);
+        mockVectorCreation(request, null);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -752,10 +752,10 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .modelId("mockModelId")
             .inputTexts(filteredInferenceList)
             .build();
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
 
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(1, 100, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -798,9 +798,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
         List<String> inferenceList = Arrays.asList(TEXT_VALUE_1);
         TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(1, 100, 0.0f, 1.0f);
+        mockVectorCreation(request, null);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -847,9 +847,9 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .modelId("mockModelId")
             .inputTexts(filteredInferenceList)
             .build();
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationConfig();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(1, 100, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -907,11 +907,11 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         Map<String, Object> updateSourceAndMetadata = deepCopy(sourceAndMetadata);
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationMapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationMapConfig();
         List<String> inferenceList = Arrays.asList(TEXT_VALUE_1, TEXT_VALUE_1);
         TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelId").inputTexts(inferenceList).build();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(2, 100, 0.0f, 1.0f);
+        mockVectorCreation(request, null);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -984,7 +984,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         );
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationMapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedSourceAndDestinationMapConfig();
         List<String> inferenceList = Arrays.asList(TEXT_VALUE_1, TEXT_VALUE_1);
         TextInferenceRequest ingestRequest = TextInferenceRequest.builder().modelId("mockModelID").inputTexts(inferenceList).build();
         List<String> filteredInferenceList = Arrays.asList("newValue");
@@ -993,7 +993,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .inputTexts(filteredInferenceList)
             .build();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(2, 100, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -1041,11 +1041,11 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         Map<String, Object> updateSourceAndMetadata = deepCopy(sourceAndMetadata);
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedMapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedMapConfig();
         List<String> inferenceList = Arrays.asList(CHILD_LEVEL_2_TEXT_FIELD_VALUE);
         TextInferenceRequest request = TextInferenceRequest.builder().modelId("mockModelID").inputTexts(inferenceList).build();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(1, 100, 0.0f, 1.0f);
+        mockVectorCreation(request, null);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -1080,7 +1080,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         ((Map) ((Map) updateSourceAndMetadata.get(PARENT_FIELD)).get(CHILD_FIELD_LEVEL_1)).put(CHILD_FIELD_LEVEL_2, "newValue");
         IngestDocument updateDocument = new IngestDocument(updateSourceAndMetadata, new HashMap<>());
 
-        OptimizedTextEmbeddingProcessor processor = createInstanceWithNestedMapConfig();
+        SelectiveTextEmbeddingProcessor processor = createInstanceWithNestedMapConfig();
         List<String> inferenceList = Arrays.asList(CHILD_LEVEL_2_TEXT_FIELD_VALUE);
         TextInferenceRequest ingestRequest = TextInferenceRequest.builder().modelId("mockModelID").inputTexts(inferenceList).build();
         List<String> filteredInferenceList = Arrays.asList("newValue");
@@ -1089,7 +1089,7 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
             .inputTexts(filteredInferenceList)
             .build();
         mockUpdateDocument(ingestDocument);
-        mockVectorCreation(2, 100, 0.0f, 1.0f);
+        mockVectorCreation(ingestRequest, updateRequest);
 
         processor.execute(ingestDocument, (BiConsumer) (doc, ex) -> {});
         processor.execute(updateDocument, (BiConsumer) (doc, ex) -> {});
@@ -1183,10 +1183,16 @@ public class OptimizedTextEmbeddingProcessorTests extends InferenceProcessorTest
         }
     }
 
-    private void mockVectorCreation(int numVectors, int vectorDimension, float min, float max) {
+    private void mockVectorCreation(TextInferenceRequest ingestRequest, TextInferenceRequest updateRequest) {
         doAnswer(invocation -> {
+            int numVectors = ingestRequest.getInputTexts().size();
             ActionListener<List<List<Float>>> listener = invocation.getArgument(1);
-            listener.onResponse(createRandomOneDimensionalMockVector(numVectors, vectorDimension, min, max));
+            listener.onResponse(createRandomOneDimensionalMockVector(numVectors, 2, 0.0f, 1.0f));
+            return null;
+        }).doAnswer(invocation -> {
+            int numVectors = updateRequest.getInputTexts().size();
+            ActionListener<List<List<Float>>> listener = invocation.getArgument(1);
+            listener.onResponse(createRandomOneDimensionalMockVector(numVectors, 2, 0.0f, 1.0f));
             return null;
         }).when(mlCommonsClientAccessor).inferenceSentences(isA(TextInferenceRequest.class), isA(ActionListener.class));
     }

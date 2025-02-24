@@ -7,8 +7,8 @@ package org.opensearch.neuralsearch.processor.factory;
 import static org.opensearch.ingest.ConfigurationUtils.readBooleanProperty;
 import static org.opensearch.ingest.ConfigurationUtils.readMap;
 import static org.opensearch.ingest.ConfigurationUtils.readStringProperty;
-import static org.opensearch.neuralsearch.processor.TextEmbeddingProcessor.DEFAULT_IGNORE_EXISTING;
-import static org.opensearch.neuralsearch.processor.TextEmbeddingProcessor.IGNORE_EXISTING;
+import static org.opensearch.neuralsearch.processor.TextEmbeddingProcessor.SKIP_EXISTING;
+import static org.opensearch.neuralsearch.processor.TextEmbeddingProcessor.DEFAULT_SKIP_EXISTING;
 import static org.opensearch.neuralsearch.processor.TextEmbeddingProcessor.TYPE;
 import static org.opensearch.neuralsearch.processor.TextEmbeddingProcessor.MODEL_ID_FIELD;
 import static org.opensearch.neuralsearch.processor.TextEmbeddingProcessor.FIELD_MAP_FIELD;
@@ -20,7 +20,7 @@ import org.opensearch.env.Environment;
 import org.opensearch.ingest.AbstractBatchingProcessor;
 import org.opensearch.neuralsearch.ml.MLCommonsClientAccessor;
 import org.opensearch.neuralsearch.processor.TextEmbeddingProcessor;
-import org.opensearch.neuralsearch.processor.optimization.OptimizedTextEmbeddingProcessor;
+import org.opensearch.neuralsearch.processor.optimization.SelectiveTextEmbeddingProcessor;
 import org.opensearch.transport.client.OpenSearchClient;
 
 /**
@@ -53,9 +53,9 @@ public final class TextEmbeddingProcessorFactory extends AbstractBatchingProcess
     protected AbstractBatchingProcessor newProcessor(String tag, String description, int batchSize, Map<String, Object> config) {
         String modelId = readStringProperty(TYPE, tag, config, MODEL_ID_FIELD);
         Map<String, Object> fieldMap = readMap(TYPE, tag, config, FIELD_MAP_FIELD);
-        boolean ignoreExisting = readBooleanProperty(TYPE, tag, config, IGNORE_EXISTING, DEFAULT_IGNORE_EXISTING);
-        if (ignoreExisting == true) {
-            return new OptimizedTextEmbeddingProcessor(
+        boolean skipExisting = readBooleanProperty(TYPE, tag, config, SKIP_EXISTING, DEFAULT_SKIP_EXISTING);
+        if (skipExisting == true) {
+            return new SelectiveTextEmbeddingProcessor(
                 tag,
                 description,
                 batchSize,

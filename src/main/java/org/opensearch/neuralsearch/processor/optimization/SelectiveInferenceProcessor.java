@@ -19,13 +19,13 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The abstract class for optimized text processing use cases. On update operation, the optimized inference processor will attempt to
- * optimize inference calls by copying over existing embeddings for the same text
+ * The abstract class for selective text processing use cases. On update operation, the selective inference processor will attempt to
+ * skip inference calls by copying over existing embeddings for the same text
  */
 
 @Log4j2
-public abstract class OptimizedInferenceProcessor extends InferenceProcessor {
-    public OptimizedInferenceProcessor(
+public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
+    public SelectiveInferenceProcessor(
         String tag,
         String description,
         int batchSize,
@@ -37,7 +37,18 @@ public abstract class OptimizedInferenceProcessor extends InferenceProcessor {
         Environment environment,
         ClusterService clusterService
     ) {
-        super(tag, description, batchSize, type, listTypeNestedMapKey, modelId, fieldMap, clientAccessor, environment, clusterService);
+        super(
+            tag,
+            description,
+            batchSize,
+            type,
+            listTypeNestedMapKey,
+            modelId,
+            ProcessorDocumentUtils.unflattenJson(fieldMap),
+            clientAccessor,
+            environment,
+            clusterService
+        );
     }
 
     public abstract Object processValue(
@@ -100,9 +111,7 @@ public abstract class OptimizedInferenceProcessor extends InferenceProcessor {
                     currentPath,
                     currLevel
                 );
-                if (!filteredInnerMap.isEmpty()) {
-                    filteredProcessMap.put(key, filteredInnerMap);
-                }
+                filteredProcessMap.put(key, filteredInnerMap.isEmpty() ? null : filteredInnerMap);
             } else if (value instanceof List) {
                 List<Object> processedList = processListValue(
                     currentPath,
@@ -116,9 +125,7 @@ public abstract class OptimizedInferenceProcessor extends InferenceProcessor {
                 }
             } else {
                 Object processedValue = processValue(currentPath, value, currLevel, sourceAndMetadataMap, existingSourceAndMetadataMap, -1);
-                if (processedValue != null) {
-                    filteredProcessMap.put(key, processedValue);
-                }
+                filteredProcessMap.put(key, processedValue);
             }
         }
         return filteredProcessMap;
@@ -141,9 +148,9 @@ public abstract class OptimizedInferenceProcessor extends InferenceProcessor {
         Map<String, Object> sourceAndMetadataMap,
         Map<String, Object> existingSourceAndMetadataMap
     ) {
-        String textKey = ProcessorUtils.findKeyFromFromValue(ProcessorDocumentUtils.unflattenJson(fieldMap), currentPath, level);
+        String textKey = ProcessorUtils.findKeyFromFromValue(fieldMap, currentPath, level);
         if (textKey == null) {
-            return new ArrayList<>(processList);
+            return (List<Object>) processList;
         }
 
         String fullTextKey = ProcessorUtils.computeFullTextKey(currentPath, textKey, level);
@@ -194,9 +201,7 @@ public abstract class OptimizedInferenceProcessor extends InferenceProcessor {
                 existingSourceAndMetadataMap,
                 i
             );
-            if (processedItem != null) {
-                filteredList.add(processedItem);
-            }
+            filteredList.add(processedItem);
         }
         return filteredList;
     }

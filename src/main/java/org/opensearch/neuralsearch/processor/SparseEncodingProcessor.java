@@ -66,7 +66,7 @@ public final class SparseEncodingProcessor extends InferenceProcessor {
                     .stream()
                     .map(vector -> PruneUtils.pruneSparseVector(pruneType, pruneRatio, vector))
                     .toList();
-                setVectorFieldsToDocument(ingestDocument, ProcessMap, sparseVectors);
+                setVectorFieldsToDocument(ingestDocument, ProcessMap, sparseVectors, false);
                 handler.accept(ingestDocument, null);
             }, e -> { handler.accept(null, e); })
         );
