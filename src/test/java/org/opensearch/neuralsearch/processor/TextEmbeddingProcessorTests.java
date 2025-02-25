@@ -766,7 +766,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         assertEquals(knnKeyList.get(lastIndex), configValueList.get(lastIndex).toString());
 
         List<List<Float>> modelTensorList = createMockVectorResult();
-        Map<String, Object> result = processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        Map<String, Object> result = processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         assertTrue(result.containsKey("oriKey1_knn"));
         assertTrue(result.containsKey("oriKey2_knn"));
         assertTrue(result.containsKey("oriKey3_knn"));
@@ -783,7 +783,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor processor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = processor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(2, 100, 0.0f, 1.0f);
-        processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         /**
          * "favorites": {
          *      "favorite": {
@@ -830,7 +830,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         processor.preprocessIngestDocument(ingestDocument);
         Map<String, Object> knnMap = processor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(2, 100, 0.0f, 1.0f);
-        processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         /**
          * "favorites.favorite": {
          *      "movie": "matrix",
@@ -875,7 +875,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         processor.preprocessIngestDocument(ingestDocument);
         Map<String, Object> knnMap = processor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(3, 100, 0.0f, 1.0f);
-        processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        processor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         /**
          * "favorites.favorite": {
          *      "movie": "matrix",
@@ -924,7 +924,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor textEmbeddingProcessor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = textEmbeddingProcessor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(2, 2, 0.0f, 1.0f);
-        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         List<Map<String, Object>> nestedObj = (List<Map<String, Object>>) ingestDocument.getSourceAndMetadata().get("nestedField");
         assertTrue(nestedObj.get(0).containsKey("vectorField"));
         assertTrue(nestedObj.get(1).containsKey("vectorField"));
@@ -939,7 +939,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor textEmbeddingProcessor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = textEmbeddingProcessor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(1, 2, 0.0f, 1.0f);
-        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         List<Map<String, Object>> nestedObj = (List<Map<String, Object>>) ingestDocument.getSourceAndMetadata().get("nestedField");
         assertFalse(nestedObj.get(0).containsKey("vectorField"));
         assertTrue(nestedObj.get(0).containsKey("textFieldNotForEmbedding"));
@@ -953,7 +953,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor textEmbeddingProcessor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = textEmbeddingProcessor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(2, 2, 0.0f, 1.0f);
-        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         Map<String, Object> nestedLevel1 = (Map<String, Object>) ingestDocument.getSourceAndMetadata().get("nestedField");
         List<Map<String, Object>> nestedObj = (List<Map<String, Object>>) nestedLevel1.get("nestedField");
         assertTrue(nestedObj.get(0).containsKey("vectorField"));
@@ -969,7 +969,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor textEmbeddingProcessor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = textEmbeddingProcessor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(2, 2, 0.0f, 1.0f);
-        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         List<Map<String, Object>> nestedObj = (List<Map<String, Object>>) ingestDocument.getSourceAndMetadata().get("nestedField");
 
         for (Map<String, Object> singleNestedObjMap : nestedObj) {
@@ -1007,7 +1007,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor textEmbeddingProcessor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = textEmbeddingProcessor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(2, 2, 0.0f, 1.0f);
-        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         List<Map<String, Object>> nestedObj = (List<Map<String, Object>>) ingestDocument.getSourceAndMetadata().get("nestedField");
 
         IntStream.range(0, nestedObj.size()).forEachOrdered(index -> {
@@ -1031,7 +1031,7 @@ public class TextEmbeddingProcessorTests extends InferenceProcessorTestCase {
         TextEmbeddingProcessor textEmbeddingProcessor = createInstanceWithNestedMapConfiguration(config);
         Map<String, Object> knnMap = textEmbeddingProcessor.buildMapWithTargetKeys(ingestDocument);
         List<List<Float>> modelTensorList = createRandomOneDimensionalMockVector(1, 2, 0.0f, 1.0f);
-        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata());
+        textEmbeddingProcessor.buildNLPResult(knnMap, modelTensorList, ingestDocument.getSourceAndMetadata(), false);
         Map<String, Object> nestedLevel1 = (Map<String, Object>) ingestDocument.getSourceAndMetadata().get("nestedField");
         List<Map<String, Object>> nestedObj = (List<Map<String, Object>>) nestedLevel1.get("nestedField");
         assertFalse(nestedObj.get(0).containsKey("vectorField"));

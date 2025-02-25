@@ -12,7 +12,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.env.Environment;
 import org.opensearch.ingest.IngestDocument;
 import org.opensearch.neuralsearch.ml.MLCommonsClientAccessor;
-import org.opensearch.neuralsearch.processor.TextInferenceRequest;
 import org.opensearch.neuralsearch.processor.util.ProcessorUtils;
 import org.opensearch.transport.client.OpenSearchClient;
 
@@ -82,10 +81,7 @@ public class SelectiveTextEmbeddingProcessor extends SelectiveInferenceProcessor
 
     @Override
     protected void doBatchExecute(List<String> inferenceList, Consumer<List<?>> handler, Consumer<Exception> onException) {
-        mlCommonsClientAccessor.inferenceSentences(
-            TextInferenceRequest.builder().modelId(this.modelId).inputTexts(inferenceList).build(),
-            ActionListener.wrap(handler::accept, onException)
-        );
+        throw new IllegalArgumentException("Batch Execute for Text Embedding Processor with skip_existing feature is not yet supported");
     }
 
     /**
@@ -94,7 +90,6 @@ public class SelectiveTextEmbeddingProcessor extends SelectiveInferenceProcessor
      *  - existing existingSourceAndMetadataMap has embeddings for inference text
      * @param currentPath path to embedding field
      * @param processValue value to be checked for whether embeddings can be copied over
-     * @param level current level in the process map traversal
      * @param sourceAndMetadataMap SourceAndMetadataMap of ingestDocument Document
      * @param existingSourceAndMetadataMap SourceAndMetadataMap of existing Document
      * @param index index of sourceValue if in list
@@ -104,25 +99,20 @@ public class SelectiveTextEmbeddingProcessor extends SelectiveInferenceProcessor
     public Object processValue(
         String currentPath,
         Object processValue,
-        int level,
         Map<String, Object> sourceAndMetadataMap,
         Map<String, Object> existingSourceAndMetadataMap,
         int index
     ) {
-        String textKey = ProcessorUtils.findKeyFromFromValue(fieldMap, currentPath, level);
-        if (textKey == null) {
+        String textPath = reversedFieldMap.get(currentPath);
+        if (textPath == null) {
             return processValue;
         }
-
-        String fullTextKey = ProcessorUtils.computeFullTextKey(currentPath, textKey, level);
-        String fullEmbeddingKey = currentPath;
-
-        Optional<Object> sourceValue = ProcessorUtils.getValueFromSource(sourceAndMetadataMap, fullTextKey, index);
-        Optional<Object> existingValue = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, fullTextKey, index);
-        Optional<Object> embeddingValue = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, fullEmbeddingKey, index);
+        Optional<Object> sourceValue = ProcessorUtils.getValueFromSource(sourceAndMetadataMap, textPath, index);
+        Optional<Object> existingValue = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, textPath, index);
+        Optional<Object> embeddingValue = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, currentPath, index);
 
         if (sourceValue.isPresent() && existingValue.isPresent() && sourceValue.get().equals(existingValue.get())) {
-            embeddingValue.ifPresent(o -> ProcessorUtils.setValueToSource(sourceAndMetadataMap, fullEmbeddingKey, o, index));
+            embeddingValue.ifPresent(o -> ProcessorUtils.setValueToSource(sourceAndMetadataMap, currentPath, o, index));
             return null;
         }
         return processValue;
@@ -144,7 +134,7 @@ public class SelectiveTextEmbeddingProcessor extends SelectiveInferenceProcessor
      */
     @Override
     public List<Object> processValues(
-        List<?> processList,
+        List<Object> processList,
         Optional<Object> sourceListOptional,
         Optional<Object> existingListOptional,
         Optional<Object> embeddingListOptional,
@@ -154,28 +144,31 @@ public class SelectiveTextEmbeddingProcessor extends SelectiveInferenceProcessor
     ) {
         List<Object> filteredList = new ArrayList<>();
         List<Object> updatedEmbeddings = new ArrayList<>();
-        if (sourceListOptional.isPresent() && existingListOptional.isPresent()) {
-            if (sourceListOptional.get() instanceof List
-                && existingListOptional.get() instanceof List
-                && embeddingListOptional.get() instanceof List) {
-                List sourceList = (ArrayList) sourceListOptional.get();
-                List existingList = (ArrayList) existingListOptional.get();
-                List embeddingList = (ArrayList) embeddingListOptional.get();
-                int min = Math.min(sourceList.size(), existingList.size());
-                for (int j = 0; j < min; j++) {
-                    if (sourceList.get(j).equals(existingList.get(j))) {
-                        updatedEmbeddings.add((embeddingList).get(j));
-                        filteredList.add(null);
-                    } else {
-                        filteredList.add(processList.get(j));
-                        updatedEmbeddings.add(null);
-                    }
-                }
-                ProcessorUtils.setValueToSource(sourceAndMetadataMap, fullEmbeddingKey, updatedEmbeddings);
-            }
-        } else {
-            return (List) processList;
+        if (sourceListOptional.isEmpty() || existingListOptional.isEmpty() || embeddingListOptional.isEmpty()) {
+            return filteredList;
         }
+        if (sourceListOptional.get() instanceof List == false
+            || existingListOptional.get() instanceof List == false
+            || embeddingListOptional.get() instanceof List == false) {
+            return processList;
+        }
+        sourceListOptional.get();
+        existingListOptional.get();
+        embeddingListOptional.get();
+        List sourceList = (List) sourceListOptional.get();
+        List existingList = (List) existingListOptional.get();
+        List embeddingList = (List) embeddingListOptional.get();
+        int min = Math.min(sourceList.size(), existingList.size());
+        for (int j = 0; j < min; j++) {
+            if (sourceList.get(j).equals(existingList.get(j))) {
+                updatedEmbeddings.add((embeddingList).get(j));
+                filteredList.add(null);
+            } else {
+                filteredList.add(processList.get(j));
+                updatedEmbeddings.add(null);
+            }
+        }
+        ProcessorUtils.setValueToSource(sourceAndMetadataMap, fullEmbeddingKey, updatedEmbeddings);
         return filteredList;
     }
 }

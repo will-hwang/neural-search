@@ -8,6 +8,7 @@ import org.opensearch.common.collect.Tuple;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.search.SearchHit;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -165,17 +166,17 @@ public class ProcessorUtils {
 
         for (String key : keys) {
             currentValue = currentValue.flatMap(value -> {
-                if (value instanceof List && index != -1) {
+                if (value instanceof ArrayList<?> && index != -1) {
                     Object listValue = ((List) value).get(index);
                     if (listValue instanceof Map) {
                         Map currentMap = (Map) listValue;
                         return Optional.ofNullable(currentMap.get(key));
                     }
-                } else if (!(value instanceof Map<?, ?>)) {
-                    return Optional.empty();
+                } else if (value instanceof Map<?, ?>) {
+                    Map currentMap = (Map) value;
+                    return Optional.ofNullable(currentMap.get(key));
                 }
-                Map currentMap = (Map) value;
-                return Optional.ofNullable(currentMap.get(key));
+                return Optional.empty();
             });
 
             if (currentValue.isEmpty()) {
@@ -213,9 +214,11 @@ public class ProcessorUtils {
 
         for (int i = 0; i < keys.length - 1; i++) {
             Object next = current.computeIfAbsent(keys[i], k -> new HashMap<>());
-            if (next instanceof List<?> list) {
+            if (next instanceof ArrayList<?> list) {
                 if (index < 0 || index >= list.size()) return;
-                current = (Map) list.get(index);
+                if (list.get(index) instanceof Map) {
+                    current = (Map) list.get(index);
+                }
             } else if (next instanceof Map<?, ?>) {
                 current = (Map) next;
             } else {
@@ -226,7 +229,7 @@ public class ProcessorUtils {
         String lastKey = keys[keys.length - 1];
         Object existingValue = current.get(lastKey);
 
-        if (existingValue instanceof List) {
+        if (existingValue instanceof ArrayList) {
             if (index >= 0 && index < ((List) existingValue).size()) {
                 ((List) existingValue).set(index, targetValue);
             } else if (index == -1) {
@@ -274,72 +277,5 @@ public class ProcessorUtils {
         }
 
         return false;
-    }
-
-    /**
-     * Given path, new key, and level, return a new path with given new key
-     * e.g:
-     * path: level1.level2.oldKey
-     * textKey: newKey
-     * level: 3
-     * returns level1.level2.newKey
-     *
-     * @param path path to old key
-     * @param textKey new key to replace in old key
-     * @param level level of the traversal
-     * @return path with new key
-     */
-    public static String computeFullTextKey(String path, String textKey, int level) {
-        String[] keys = path.split("\\.", level);
-        keys[keys.length - 1] = textKey;
-        return String.join(".", keys);
-    }
-
-    /**
-     * Given a map, path to value, and level in the map, return the key mapped with given value.
-     * if there are multiple keys mapping with same value, return the last key
-     * e.g:
-     *
-     * map:
-     *  {
-     *     "level1": {
-     *          "level2" : {
-     *              "first_text": "passage_embedding",
-     *              "second_text": "passage_embedding"
-     *          }
-     *      }
-     * }
-     * path: "level1.level2.passage_embedding"
-     * level: 3
-     * returns "second_text".
-     *
-     * @param sourceAsMap The Source map (a map of maps) to iterate through
-     * @param path The path to key to insert the desired mapping
-     */
-    public static String findKeyFromFromValue(Map<String, Object> sourceAsMap, String path, int level) {
-        String[] keys = path.split("\\.", level);
-
-        String targetValue = keys[keys.length - 1];
-        Map<String, Object> currentMap = sourceAsMap;
-
-        for (int i = 0; i < keys.length - 1; i++) {
-            if (currentMap.containsKey(keys[i])) {
-                Object value = currentMap.get(keys[i]);
-                if (value instanceof Map) {
-                    currentMap = (Map) value;
-                } else {
-                    return null;
-                }
-            } else {
-                return null;
-            }
-        }
-        String lastFoundKey = null;
-        for (Map.Entry<String, Object> entry : currentMap.entrySet()) {
-            if (entry.getValue().equals(targetValue)) {
-                lastFoundKey = entry.getKey();
-            }
-        }
-        return lastFoundKey;
     }
 }

@@ -231,6 +231,61 @@ public class ProcessorDocumentUtils {
         return result;
     }
 
+    /**
+     * Flattens a nested map and then flips each key/value pair.
+     * For a leaf node, the parent's path is prepended to its value.
+     * Finally, the flipped map will have the transformed value as the key,
+     * and the original flattened key as its value.
+     *
+     * e.g:
+     * map:
+     * {
+     *     parent:
+     *        level1:
+     *           key: value
+     * }
+     *
+     * returns
+     * {parent.level1.value: parent.level1.key}
+     *
+     * @param map the nested map to process
+     * @return a flattened map with flipped key–value pairs
+     */
+    public static Map<String, String> flattenAndFlip(Map<String, Object> map) {
+        Map<String, String> flippedMap = new HashMap<>();
+        flattenAndFlip("", map, flippedMap);
+        return flippedMap;
+    }
+
+    /**
+     * Recursive helper method that processes the nested map.
+     * When a leaf value is encountered, the parent's path is computed
+     * and prepended to the value. The final mapping is flipped, so that
+     * the new key becomes the computed value and the new value is the flattened key.
+     *
+     * @param prefix     the current key prefix (initially empty)
+     * @param map        the current map to process
+     * @param flippedMap the resulting map with flipped key–value pairs
+     */
+    private static void flattenAndFlip(String prefix, Map<String, Object> map, Map<String, String> flippedMap) {
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            String newKey = prefix.isEmpty() ? key : prefix + "." + key;
+            if (value instanceof Map) {
+                flattenAndFlip(newKey, (Map<String, Object>) value, flippedMap);
+            } else if (value instanceof String) {
+                String parentPath = "";
+                int lastDotIndex = newKey.lastIndexOf('.');
+                if (lastDotIndex != -1) {
+                    parentPath = newKey.substring(0, lastDotIndex);
+                }
+                String transformedValue = parentPath.isEmpty() ? value.toString() : parentPath + "." + value;
+                flippedMap.put(transformedValue, newKey);
+            }
+        }
+    }
+
     private static List<Object> handleList(List<Object> list) {
         List<Object> result = new ArrayList<>();
         Stack<ProcessJsonListItem> stack = new Stack<>();

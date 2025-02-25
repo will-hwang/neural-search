@@ -17,7 +17,6 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -55,37 +54,6 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
 
     public static final String MODEL_ID_FIELD = "model_id";
     public static final String FIELD_MAP_FIELD = "field_map";
-    private static final BiFunction<Object, Object, Object> REMAPPING_FUNCTION = (v1, v2) -> {
-        /**
-         * REMAPPING_FUNCTION is invoked when merge is invoked on Map and takes two arguments:
-         *
-         * v1: The current (existing) value in the map.
-         * v2: The new value you're trying to merge in
-         *
-         * The function returns the value that should be associated with the key
-         *
-         * In case of type Collection (always List type currently) REMAPPING_FUNCTION joins v1 and v2 by inserting values in v2 to v1 where
-         * the index is marked null
-         * In case of type Maps, REMAPPING_FUNCTION joins v1 and v2 by putting values in v2 to v1
-         * */
-
-        if (v1 instanceof Collection && v2 instanceof Collection) {
-            Iterator<?> iterator = ((Collection) v2).iterator();
-            for (int i = 0; i < ((Collection) v1).size(); i++) {
-                if (((List) v1).get(i) == null) {
-                    ((List) v1).set(i, iterator.next());
-                }
-            }
-            assert iterator.hasNext() == false;
-            return v1;
-        } else if (v1 instanceof Map && v2 instanceof Map) {
-            ((Map) v1).putAll((Map) v2);
-            return v1;
-        } else {
-            return v2;
-        }
-
-    };
 
     private final String type;
 
@@ -380,7 +348,7 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
                     buildNestedMap(processedNestedKey.getKey(), processedNestedKey.getValue(), map, next);
                 }
             }
-            treeRes.merge(parentKey, next, REMAPPING_FUNCTION);
+            treeRes.merge(parentKey, next, (v1, v2) -> fullReMap(v1, v2));
         } else {
             String key = String.valueOf(processorKey);
             treeRes.put(key, sourceAndMetadataMap.get(parentKey));
@@ -444,35 +412,40 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
         // if partialUpdate is set to false, full update is required where each vector embedding in nlpResult
         // can directly be populated to ingestDocument
         if (partialUpdate == false) {
-            Map<String, Object> nlpResult = buildNLPResult(processorMap, results, ingestDocument.getSourceAndMetadata());
+            Map<String, Object> nlpResult = buildNLPResult(processorMap, results, ingestDocument.getSourceAndMetadata(), partialUpdate);
             nlpResult.forEach(ingestDocument::setFieldValue);
-        } else {
-            // if partialUpdate is set to true, some embeddings have been copied over from existing document, which vector embedding in
-            // nlpResult needs to be populated to only where marked as 'null'
-            Map<String, Object> nlpResult = buildNLPResult(processorMap, results, ingestDocument.getSourceAndMetadata());
-            for (Map.Entry<String, Object> nlpEntry : nlpResult.entrySet()) {
-                String key = nlpEntry.getKey();
-                Object target = ingestDocument.getSourceAndMetadata().get(key);
-                Object nlpValues = nlpEntry.getValue();
-                if (target instanceof List && nlpValues instanceof List) {
-                    ListIterator iterator = ((List) target).listIterator();
-                    ListIterator nlpIterator = ((List) nlpValues).listIterator();
-                    while (iterator.hasNext()) {
-                        if (iterator.next() == null) {
-                            iterator.set(nlpIterator.next());
-                        }
+            return;
+        }
+        // if partialUpdate is set to true, some embeddings have been copied over from existing document, which vector embedding in
+        // nlpResult needs to be populated to only where marked as 'null'
+        Map<String, Object> nlpResult = buildNLPResult(processorMap, results, ingestDocument.getSourceAndMetadata(), partialUpdate);
+        for (Map.Entry<String, Object> nlpEntry : nlpResult.entrySet()) {
+            String key = nlpEntry.getKey();
+            Object target = ingestDocument.getSourceAndMetadata().get(key);
+            Object nlpValues = nlpEntry.getValue();
+            if (target instanceof ArrayList && nlpValues instanceof ArrayList) {
+                ListIterator iterator = ((List) target).listIterator();
+                ListIterator nlpIterator = ((List) nlpValues).listIterator();
+                while (iterator.hasNext()) {
+                    if (iterator.next() == null) {
+                        iterator.set(nlpIterator.next());
                     }
-                    ingestDocument.setFieldValue(key, target);
-                } else {
-                    ingestDocument.setFieldValue(key, nlpValues);
                 }
+                ingestDocument.setFieldValue(key, target);
+            } else {
+                ingestDocument.setFieldValue(key, nlpValues);
             }
         }
     }
 
     @SuppressWarnings({ "unchecked" })
     @VisibleForTesting
-    Map<String, Object> buildNLPResult(Map<String, Object> processorMap, List<?> results, Map<String, Object> sourceAndMetadataMap) {
+    Map<String, Object> buildNLPResult(
+        Map<String, Object> processorMap,
+        List<?> results,
+        Map<String, Object> sourceAndMetadataMap,
+        boolean partialUpdate
+    ) {
         IndexWrapper indexWrapper = new IndexWrapper(0);
         Map<String, Object> result = new LinkedHashMap<>();
         for (Map.Entry<String, Object> knnMapEntry : processorMap.entrySet()) {
@@ -482,9 +455,9 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
             if (sourceValue instanceof String) {
                 result.put(knnKey, results.get(indexWrapper.index++));
             } else if (sourceValue instanceof List) {
-                result.put(knnKey, buildNLPResultForListType((List<String>) sourceValue, results, indexWrapper));
+                result.put(knnKey, buildNLPResultForListType((ArrayList<String>) sourceValue, results, indexWrapper));
             } else if (sourceValue instanceof Map) {
-                putNLPResultToSourceMapForMapType(knnKey, sourceValue, results, indexWrapper, sourceAndMetadataMap);
+                putNLPResultToSourceMapForMapType(knnKey, sourceValue, results, indexWrapper, sourceAndMetadataMap, partialUpdate);
             }
         }
         return result;
@@ -496,7 +469,8 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
         Object sourceValue,
         List<?> results,
         IndexWrapper indexWrapper,
-        Map<String, Object> sourceAndMetadataMap
+        Map<String, Object> sourceAndMetadataMap,
+        boolean partialUpdate
     ) {
         if (processorKey == null || sourceAndMetadataMap == null || sourceValue == null) return;
         if (sourceValue instanceof Map) {
@@ -516,7 +490,8 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
                             indexWrapper,
                             (List<Map<String, Object>>) sourceAndMetadataMap.get(processorKey),
                             inputNestedMapEntry.getKey(),
-                            inputNestedMapEntry.getValue()
+                            inputNestedMapEntry.getValue(),
+                            partialUpdate
                         );
                     }
                 } else {
@@ -527,17 +502,22 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
                         processedNestedKey.getValue(),
                         results,
                         indexWrapper,
-                        sourceMap
+                        sourceMap,
+                        partialUpdate
                     );
                 }
             }
         } else if (sourceValue instanceof String) {
-            sourceAndMetadataMap.merge(processorKey, results.get(indexWrapper.index++), REMAPPING_FUNCTION);
+            sourceAndMetadataMap.merge(
+                processorKey,
+                results.get(indexWrapper.index++),
+                partialUpdate == true ? this::partialReMap : this::fullReMap
+            );
         } else if (sourceValue instanceof List) {
             sourceAndMetadataMap.merge(
                 processorKey,
-                buildNLPResultForListType((List<String>) sourceValue, results, indexWrapper),
-                REMAPPING_FUNCTION
+                buildNLPResultForListType((ArrayList<String>) sourceValue, results, indexWrapper),
+                partialUpdate == true ? this::partialReMap : this::fullReMap
             );
         }
     }
@@ -564,7 +544,8 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
         IndexWrapper indexWrapper,
         List<Map<String, Object>> sourceAndMetadataMapValueInList,
         String inputNestedMapEntryKey,
-        Object inputNestedMapEntryValue
+        Object inputNestedMapEntryValue,
+        boolean partialUpdate
     ) {
         // build nlp output for object in sourceValue which is map type
         Iterator<Map<String, Object>> iterator = sourceAndMetadataMapValueInList.iterator();
@@ -576,7 +557,8 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
                 results,
                 indexWrapper,
                 nestedElement,
-                index
+                index,
+                partialUpdate
             );
         });
     }
@@ -590,6 +572,7 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
      * @param results
      * @param indexWrapper
      * @param sourceAndMetadataMap
+     * @param nestedElementIndex index of the element in the list field of source document
      */
     @SuppressWarnings("unchecked")
     private void putNLPResultToSingleSourceMapInList(
@@ -598,7 +581,8 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
         List<?> results,
         IndexWrapper indexWrapper,
         Map<String, Object> sourceAndMetadataMap,
-        int nestedIndex
+        int nestedElementIndex,
+        boolean partialUpdate
     ) {
         if (processorKey == null || sourceAndMetadataMap == null || sourceValue == null) return;
         if (sourceValue instanceof Map) {
@@ -611,14 +595,17 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
                     results,
                     indexWrapper,
                     sourceMap,
-                    nestedIndex
+                    nestedElementIndex,
+                    partialUpdate
                 );
             }
         } else {
-            if (sourceValue instanceof List) {
-                if (((List<Object>) sourceValue).get(nestedIndex) != null) {
-                    sourceAndMetadataMap.merge(processorKey, results.get(indexWrapper.index++), REMAPPING_FUNCTION);
-                }
+            if (sourceValue instanceof List && ((List<Object>) sourceValue).get(nestedElementIndex) != null) {
+                sourceAndMetadataMap.merge(
+                    processorKey,
+                    results.get(indexWrapper.index++),
+                    partialUpdate == true ? this::partialReMap : this::fullReMap
+                );
             }
         }
     }
@@ -634,7 +621,7 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
         return sourceMap;
     }
 
-    private List<Map<String, Object>> buildNLPResultForListType(List<String> sourceValue, List<?> results, IndexWrapper indexWrapper) {
+    private List<Map<String, Object>> buildNLPResultForListType(ArrayList<String> sourceValue, List<?> results, IndexWrapper indexWrapper) {
         List<Map<String, Object>> keyToResult = new ArrayList<>();
         IntStream.range(0, sourceValue.size()).forEachOrdered(x -> {
             if (sourceValue.get(x) != null) { // only add to keyToResult when sourceValue.get(x) exists,
@@ -668,6 +655,53 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
                 handler.accept(ingestDocument, null);
             }, e -> { handler.accept(null, e); })
         );
+    }
+
+    /**
+     * Merges two values during a map merge operation when both an existing value and a new value are present.
+     * This method is designed to handle merging when both values are either of type Collection or Map:
+     *
+     * @param v1 the current (existing) value in the map, expected to be a Collection or a Map
+     * @param v2 the new value to be merged, expected to be a Collection or a Map
+     * @return the merged value to be associated with the key; either the updated v1 or, if the types do not match,
+     *         v2 is returned
+     */
+    private Object fullReMap(Object v1, Object v2) {
+        if (v1 instanceof Collection && v2 instanceof Collection) {
+            ((Collection) v1).addAll((Collection) v2);
+            return v1;
+        } else if (v1 instanceof Map && v2 instanceof Map) {
+            ((Map) v1).putAll((Map) v2);
+            return v1;
+        } else {
+            return v2;
+        }
+    }
+
+    /**
+     * Merges two values for a map merge operation by selectively replacing null entries in a list
+     * or combining entries in a map.
+     *
+     * @param v1 the current (existing) value in the map, expected to be a ArrayList or a Map
+     * @param v2 the new value to merge, expected to be an ArrayList or Map
+     * @return the merged value that should be associated with the key after the merge operation
+     */
+    private Object partialReMap(Object v1, Object v2) {
+        if (v1 instanceof ArrayList && v2 instanceof ArrayList) {
+            Iterator<?> iterator = ((ArrayList) v2).iterator();
+            for (int i = 0; i < ((List) v1).size(); i++) {
+                if (((ArrayList) v1).get(i) == null) {
+                    ((ArrayList) v1).set(i, iterator.next());
+                }
+            }
+            assert !iterator.hasNext();
+            return v1;
+        } else if (v1 instanceof Map && v2 instanceof Map) {
+            ((Map) v1).putAll((Map) v2);
+            return v1;
+        } else {
+            return v2;
+        }
     }
 
     @Override

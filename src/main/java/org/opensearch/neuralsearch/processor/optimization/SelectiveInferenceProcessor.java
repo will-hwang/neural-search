@@ -25,6 +25,8 @@ import java.util.Optional;
 
 @Log4j2
 public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
+    protected Map<String, String> reversedFieldMap;
+
     public SelectiveInferenceProcessor(
         String tag,
         String description,
@@ -37,31 +39,20 @@ public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
         Environment environment,
         ClusterService clusterService
     ) {
-        super(
-            tag,
-            description,
-            batchSize,
-            type,
-            listTypeNestedMapKey,
-            modelId,
-            ProcessorDocumentUtils.unflattenJson(fieldMap),
-            clientAccessor,
-            environment,
-            clusterService
-        );
+        super(tag, description, batchSize, type, listTypeNestedMapKey, modelId, fieldMap, clientAccessor, environment, clusterService);
+        this.reversedFieldMap = ProcessorDocumentUtils.flattenAndFlip(fieldMap);
     }
 
     public abstract Object processValue(
         String currentPath,
         Object processValue,
-        int level,
         Map<String, Object> sourceAndMetadataMap,
         Map<String, Object> existingSourceAndMetadataMap,
         int index
     );
 
     public abstract List<Object> processValues(
-        List<?> processList,
+        List<Object> processList,
         Optional<Object> sourceList,
         Optional<Object> existingList,
         Optional<Object> embeddingList,
@@ -103,11 +94,11 @@ public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
             Object value = entry.getValue();
             String currentPath = prevPath.isEmpty() ? key : prevPath + "." + key;
             int currLevel = prevLevel + 1;
-            if (value instanceof Map<?, ?>) {
+            if (value instanceof Map) {
                 Map<String, Object> filteredInnerMap = filterProcessMap(
                     existingSourceAndMetadataMap,
                     sourceAndMetadataMap,
-                    (Map<String, Object>) value,
+                    (Map) value,
                     currentPath,
                     currLevel
                 );
@@ -115,8 +106,7 @@ public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
             } else if (value instanceof List) {
                 List<Object> processedList = processListValue(
                     currentPath,
-                    (List<?>) value,
-                    currLevel,
+                    (List<Object>) value,
                     sourceAndMetadataMap,
                     existingSourceAndMetadataMap
                 );
@@ -124,7 +114,7 @@ public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
                     filteredProcessMap.put(key, processedList);
                 }
             } else {
-                Object processedValue = processValue(currentPath, value, currLevel, sourceAndMetadataMap, existingSourceAndMetadataMap, -1);
+                Object processedValue = processValue(currentPath, value, sourceAndMetadataMap, existingSourceAndMetadataMap, -1);
                 filteredProcessMap.put(key, processedValue);
             }
         }
@@ -136,28 +126,24 @@ public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
      *
      * @param currentPath The current path in dot notation for the list being processed
      * @param processList The list of values to process
-     * @param level The current nesting level in the hierarchy
      * @param sourceAndMetadataMap SourceAndMetadataMap of ingestDocument Document
      * @param existingSourceAndMetadataMap SourceAndMetadataMap of existing Document
      * @return A processed list containing non-filtered elements
      */
     protected List<Object> processListValue(
         String currentPath,
-        List<?> processList,
-        int level,
+        List<Object> processList,
         Map<String, Object> sourceAndMetadataMap,
         Map<String, Object> existingSourceAndMetadataMap
     ) {
-        String textKey = ProcessorUtils.findKeyFromFromValue(fieldMap, currentPath, level);
+        String textKey = reversedFieldMap.get(currentPath);
         if (textKey == null) {
-            return (List<Object>) processList;
+            return processList;
         }
 
-        String fullTextKey = ProcessorUtils.computeFullTextKey(currentPath, textKey, level);
-        String fullEmbeddingKey = currentPath;
-        Optional<Object> sourceList = ProcessorUtils.getValueFromSource(sourceAndMetadataMap, fullTextKey);
-        Optional<Object> existingList = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, fullTextKey);
-        Optional<Object> embeddingList = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, fullEmbeddingKey);
+        Optional<Object> sourceList = ProcessorUtils.getValueFromSource(sourceAndMetadataMap, textKey);
+        Optional<Object> existingList = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, textKey);
+        Optional<Object> embeddingList = ProcessorUtils.getValueFromSource(existingSourceAndMetadataMap, currentPath);
         if (sourceList.isPresent() && sourceList.get() instanceof List) {
             return processValues(
                 processList,
@@ -166,10 +152,10 @@ public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
                 embeddingList,
                 sourceAndMetadataMap,
                 existingSourceAndMetadataMap,
-                fullEmbeddingKey
+                currentPath
             );
         } else {
-            return processMapValuesInList(processList, currentPath, level, sourceAndMetadataMap, existingSourceAndMetadataMap);
+            return processMapValuesInList(processList, currentPath, sourceAndMetadataMap, existingSourceAndMetadataMap);
 
         }
     }
@@ -179,28 +165,19 @@ public abstract class SelectiveInferenceProcessor extends InferenceProcessor {
      *
      * @param processList The list of Map items to process
      * @param currentPath The current path in dot notation
-     * @param level The current nesting level in the hierarchy
      * @param sourceAndMetadataMap SourceAndMetadataMap of ingestDocument Document
      * @param existingSourceAndMetadataMap SourceAndMetadataMap of existing Document
      * @return A processed list containing non-filtered elements
      */
     private List<Object> processMapValuesInList(
-        List<?> processList,
+        List<Object> processList,
         String currentPath,
-        int level,
         Map<String, Object> sourceAndMetadataMap,
         Map<String, Object> existingSourceAndMetadataMap
     ) {
         List<Object> filteredList = new ArrayList<>();
         for (int i = 0; i < processList.size(); i++) {
-            Object processedItem = processValue(
-                currentPath,
-                processList.get(i),
-                level,
-                sourceAndMetadataMap,
-                existingSourceAndMetadataMap,
-                i
-            );
+            Object processedItem = processValue(currentPath, processList.get(i), sourceAndMetadataMap, existingSourceAndMetadataMap, i);
             filteredList.add(processedItem);
         }
         return filteredList;
