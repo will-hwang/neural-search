@@ -455,7 +455,7 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
             if (sourceValue instanceof String) {
                 result.put(knnKey, results.get(indexWrapper.index++));
             } else if (sourceValue instanceof List) {
-                result.put(knnKey, buildNLPResultForListType((ArrayList<String>) sourceValue, results, indexWrapper));
+                result.put(knnKey, buildNLPResultForListType((List<String>) sourceValue, results, indexWrapper));
             } else if (sourceValue instanceof Map) {
                 putNLPResultToSourceMapForMapType(knnKey, sourceValue, results, indexWrapper, sourceAndMetadataMap, partialUpdate);
             }
@@ -621,7 +621,7 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
         return sourceMap;
     }
 
-    private List<Map<String, Object>> buildNLPResultForListType(ArrayList<String> sourceValue, List<?> results, IndexWrapper indexWrapper) {
+    private List<Map<String, Object>> buildNLPResultForListType(List<String> sourceValue, List<?> results, IndexWrapper indexWrapper) {
         List<Map<String, Object>> keyToResult = new ArrayList<>();
         IntStream.range(0, sourceValue.size()).forEachOrdered(x -> {
             if (sourceValue.get(x) != null) { // only add to keyToResult when sourceValue.get(x) exists,
