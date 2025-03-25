@@ -48,6 +48,9 @@ import com.google.common.collect.ImmutableMap;
 import lombok.extern.log4j.Log4j2;
 import org.opensearch.neuralsearch.processor.optimization.InferenceFilter;
 import org.opensearch.neuralsearch.util.ProcessorDocumentUtils;
+import org.opensearch.neuralsearch.util.TokenWeightUtil;
+import org.opensearch.neuralsearch.util.prune.PruneType;
+import org.opensearch.neuralsearch.util.prune.PruneUtils;
 
 /**
  * The abstract class for text processing use cases. Users provide a field name map and a model id.
@@ -780,6 +783,38 @@ public abstract class InferenceProcessor extends AbstractBatchingProcessor {
             TextInferenceRequest.builder().modelId(this.modelId).inputTexts(inferenceList).build(),
             ActionListener.wrap(vectors -> {
                 setVectorFieldsToDocument(ingestDocument, processMap, vectors);
+                handler.accept(ingestDocument, null);
+            }, e -> { handler.accept(null, e); })
+        );
+    }
+
+    /**
+     * This method invokes inference call that returns results as map through mlCommonsClientAccessor and populates retrieved embeddings to ingestDocument
+     *
+     * @param ingestDocument ingestDocument to populate embeddings to
+     * @param processMap map indicating the path in ingestDocument to populate embeddings
+     * @param inferenceList list of texts to be model inference
+     * @param pruneType    The type of prune strategy to use
+     * @param pruneRatio   The ratio or threshold for prune
+     * @param handler handler for accepting IngestionDocument
+     *
+     */
+    protected void makeInferenceCallWithMapResult(
+        IngestDocument ingestDocument,
+        Map<String, Object> processMap,
+        List<String> inferenceList,
+        PruneType pruneType,
+        float pruneRatio,
+        BiConsumer<IngestDocument, Exception> handler
+    ) {
+        mlCommonsClientAccessor.inferenceSentencesWithMapResult(
+            TextInferenceRequest.builder().modelId(this.modelId).inputTexts(inferenceList).build(),
+            ActionListener.wrap(resultMaps -> {
+                List<Map<String, Float>> sparseVectors = TokenWeightUtil.fetchListOfTokenWeightMap(resultMaps)
+                    .stream()
+                    .map(vector -> PruneUtils.pruneSparseVector(pruneType, pruneRatio, vector))
+                    .toList();
+                setVectorFieldsToDocument(ingestDocument, processMap, sparseVectors);
                 handler.accept(ingestDocument, null);
             }, e -> { handler.accept(null, e); })
         );
